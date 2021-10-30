@@ -36,29 +36,44 @@ public class Main {
             System.out.println(Thread.currentThread().getName());
 
             var inputFromClient = new BufferedReader(new InputStreamReader((client.getInputStream())));
+            readRequest(inputFromClient);
 
-            while (true) {
-
-                var line = inputFromClient.readLine();
-                if (line == null || line.isEmpty()) {
-                    break;
-                }
-                billBoard.add(line);
-                System.out.println(line);
-
-            }
             var outputToClient = new PrintWriter(client.getOutputStream());
-            // outputToClient.print("HTTP/1.1 404 Not Found\r\nContent-length: 0\r\n\r\n");
-            for (String line : billBoard) {
-                outputToClient.print(line + "\r\n");
-            }
-            outputToClient.print("\r\n");
-            outputToClient.flush();
+            sendResponse(outputToClient);
+
             inputFromClient.close();
             outputToClient.close();
             client.close();
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    private static void sendResponse(PrintWriter outputToClient) {
+        // outputToClient.print("HTTP/1.1 404 Not Found\r\nContent-length: 0\r\n\r\n");
+        synchronized (billBoard) {
+            for (String line : billBoard) {
+                outputToClient.print(line + "\r\n");
+            }
+        }
+        outputToClient.print("\r\n");
+        outputToClient.flush();
+    }
+
+    private static void readRequest(BufferedReader inputFromClient) throws IOException {
+        List<String> tempList = new ArrayList<>();
+        while (true) {
+
+            var line = inputFromClient.readLine();
+            if (line == null || line.isEmpty()) {
+                break;
+            }
+            tempList.add(line);
+            System.out.println(line);
+
+        }
+        synchronized (billBoard) {
+            billBoard.addAll(tempList);
         }
     }
 }
