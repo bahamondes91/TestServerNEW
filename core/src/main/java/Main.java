@@ -1,3 +1,5 @@
+import com.google.gson.Gson;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -50,13 +52,26 @@ public class Main {
     }
 
     private static void sendResponse(PrintWriter outputToClient) {
-        // outputToClient.print("HTTP/1.1 404 Not Found\r\nContent-length: 0\r\n\r\n");
-        synchronized (billBoard) {
-            for (String line : billBoard) {
-                outputToClient.print(line + "\r\n");
-            }
-        }
-        outputToClient.print("\r\n");
+
+      //  List<Person> persons = new ArrayList<>();
+//          persons.add(  new Person("Martin", 43, true));
+//           persons.add( new Person("Kalle", 23, false));
+//           persons.add( new Person("Anna", 11, true));
+var persons = List.of( new Person("Martin", 43, true), new Person("Martin", 43, true), new Person("Martin", 43, true));
+
+
+        Gson gson = new Gson();
+
+        String json = gson.toJson(persons);
+        System.out.println(json);
+
+        outputToClient.print("HTTP/1.1 404 Not Found\r\nContent-length: 0\r\n\r\n");
+//        synchronized (billBoard) {
+//            for (String line : billBoard) {
+//                outputToClient.print(line + "\r\n");
+//            }
+//        }
+//        outputToClient.print("\r\n");
         outputToClient.flush();
     }
 
