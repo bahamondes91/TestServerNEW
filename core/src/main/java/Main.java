@@ -1,11 +1,9 @@
 import com.google.gson.Gson;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -40,7 +38,7 @@ public class Main {
             var inputFromClient = new BufferedReader(new InputStreamReader((client.getInputStream())));
             readRequest(inputFromClient);
 
-            var outputToClient = new PrintWriter(client.getOutputStream());
+            var outputToClient = client.getOutputStream();
             sendResponse(outputToClient);
 
             inputFromClient.close();
@@ -51,13 +49,16 @@ public class Main {
         }
     }
 
-    private static void sendResponse(PrintWriter outputToClient) {
+    private static void sendResponse(OutputStream outputToClient) throws IOException {
 
-      //  List<Person> persons = new ArrayList<>();
+        //  List<Person> persons = new ArrayList<>();
 //          persons.add(  new Person("Martin", 43, true));
 //           persons.add( new Person("Kalle", 23, false));
 //           persons.add( new Person("Anna", 11, true));
-var persons = List.of( new Person("Martin", 43, true), new Person("Martin", 43, true), new Person("Martin", 43, true));
+
+        var persons = List.of(new Person("Martin", 43, true),
+                new Person("Martin", 43, true),
+                new Person("Martin", 43, true));
 
 
         Gson gson = new Gson();
@@ -65,7 +66,14 @@ var persons = List.of( new Person("Martin", 43, true), new Person("Martin", 43, 
         String json = gson.toJson(persons);
         System.out.println(json);
 
-        outputToClient.print("HTTP/1.1 404 Not Found\r\nContent-length: 0\r\n\r\n");
+        byte[] data = json.getBytes(StandardCharsets.UTF_8);
+
+        String header = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-length: " + data.length + "\r\n\r\n";
+        outputToClient.write(header.getBytes());
+        outputToClient.write(data);
+
+
+        // outputToClient.print("HTTP/1.1 404 Not Found\r\nContent-length: 0\r\n\r\n");
 //        synchronized (billBoard) {
 //            for (String line : billBoard) {
 //                outputToClient.print(line + "\r\n");
