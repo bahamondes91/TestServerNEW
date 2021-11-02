@@ -36,10 +36,14 @@ public class Main {
             System.out.println(Thread.currentThread().getName());
 
             var inputFromClient = new BufferedReader(new InputStreamReader((client.getInputStream())));
-            readRequest(inputFromClient);
+            var url = readRequest(inputFromClient);
 
             var outputToClient = client.getOutputStream();
-            sendResponse(outputToClient);
+
+            if (url.equals("/cat.png"))
+                sendImageResponse(outputToClient);
+            else
+                sendJsonResponse(outputToClient);
 
             inputFromClient.close();
             outputToClient.close();
@@ -49,7 +53,29 @@ public class Main {
         }
     }
 
-    private static void sendResponse(OutputStream outputToClient) throws IOException {
+    private static void sendImageResponse(OutputStream outputToClient) throws IOException {
+        String header = "";
+        byte[] data = new byte[0];
+        File file = new File("core/src/main/resources/cat.png");
+        if (!(file.exists() && !file.isDirectory())) {
+            header = "HTTP/1.1 404 Not Found\r\nContent-length: 0\r\n\r\n";
+        } else {
+            try (FileInputStream fileInputStream = new FileInputStream(file)) {
+                data = new byte[(int) file.length()];
+                fileInputStream.read(data);
+                header = "HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nContent-length: " + data.length + "\r\n\r\n";
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        outputToClient.write(header.getBytes());
+        outputToClient.write(data);
+
+        outputToClient.flush();
+
+    }
+
+    private static void sendJsonResponse(OutputStream outputToClient) throws IOException {
 
         //  List<Person> persons = new ArrayList<>();
 //          persons.add(  new Person("Martin", 43, true));
@@ -83,20 +109,24 @@ public class Main {
         outputToClient.flush();
     }
 
-    private static void readRequest(BufferedReader inputFromClient) throws IOException {
-        List<String> tempList = new ArrayList<>();
+    private static String readRequest(BufferedReader inputFromClient) throws IOException {
+        //  List<String> tempList = new ArrayList<>();
+        var url = "";
+
         while (true) {
 
             var line = inputFromClient.readLine();
+            if (line.startsWith("GET"))
+                url = line.split(" ")[1];
             if (line == null || line.isEmpty()) {
                 break;
             }
-            tempList.add(line);
+            // tempList.add(line);
             System.out.println(line);
-
         }
-        synchronized (billBoard) {
-            billBoard.addAll(tempList);
-        }
+//        synchronized (billBoard) {
+//            billBoard.addAll(tempList);
+//        }
+        return url;
     }
 }
