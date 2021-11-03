@@ -8,6 +8,10 @@ public class Client {
 
     public static void main(String[] args) {
 
+        var bytes = System.lineSeparator().getBytes();
+        for (var b : bytes) {
+            System.out.println(b);
+        }
         try {
             Socket socket = new Socket("localhost", 5050);
 

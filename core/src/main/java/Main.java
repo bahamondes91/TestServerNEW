@@ -1,11 +1,15 @@
+import Se.Iths.alexis.User;
 import com.google.gson.Gson;
 
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.sql.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -19,10 +23,12 @@ public class Main {
 
         try (ServerSocket socket = new ServerSocket(5050)) {
 
-
+            System.out.println(Thread.currentThread().getName());
             while (true) {
                 Socket client = socket.accept();
                 executorService.submit(() -> handleConnection(client));
+
+
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -32,17 +38,17 @@ public class Main {
 
     private static void handleConnection(Socket client) {
         try {
-            System.out.println(client.getInetAddress());
-            System.out.println(Thread.currentThread().getName());
 
             var inputFromClient = new BufferedReader(new InputStreamReader((client.getInputStream())));
             var url = readRequest(inputFromClient);
 
             var outputToClient = client.getOutputStream();
 
-            if (url.equals("/cat.png"))
-                sendImageResponse(outputToClient);
-            else
+            if (url.equals("/cat.png")) {
+                sendCatResponse(outputToClient);
+            } else if (url.equals("/dog.jpg")) {
+                sendDogResponse(outputToClient);
+            } else
                 sendJsonResponse(outputToClient);
 
             inputFromClient.close();
@@ -53,7 +59,29 @@ public class Main {
         }
     }
 
-    private static void sendImageResponse(OutputStream outputToClient) throws IOException {
+    private static void sendDogResponse(OutputStream outputToClient) throws IOException {
+        String header = "";
+        byte[] data = new byte[0];
+        File file = new File("core/src/main/resources/dog.jpg");
+        if (!(file.exists() && !file.isDirectory())) {
+            header = "HTTP/1.1 404 Not Found\r\nContent-length: 0\r\n\r\n";
+        } else {
+            try (FileInputStream fileInputStream = new FileInputStream(file)) {
+                data = new byte[(int) file.length()];
+                fileInputStream.read(data);
+                header = "HTTP/1.1 200 OK\r\nContent-Type: image/jpg\r\nContent-length: " + data.length + "\r\n\r\n";
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        outputToClient.write(header.getBytes());
+        outputToClient.write(data);
+
+        outputToClient.flush();
+
+    }
+
+    private static void sendCatResponse(OutputStream outputToClient) throws IOException {
         String header = "";
         byte[] data = new byte[0];
         File file = new File("core/src/main/resources/cat.png");
@@ -77,19 +105,12 @@ public class Main {
 
     private static void sendJsonResponse(OutputStream outputToClient) throws IOException {
 
-        //  List<Person> persons = new ArrayList<>();
-//          persons.add(  new Person("Martin", 43, true));
-//           persons.add( new Person("Kalle", 23, false));
-//           persons.add( new Person("Anna", 11, true));
 
-        var persons = List.of(new Person("Martin", 43, true),
-                new Person("Martin", 43, true),
-                new Person("Martin", 43, true));
-
+        var users = List.of(new User("51", "Alexis", "Aravena"), new User("52", "Dora", "mcflora"));
 
         Gson gson = new Gson();
 
-        String json = gson.toJson(persons);
+        String json = gson.toJson(users);
         System.out.println(json);
 
         byte[] data = json.getBytes(StandardCharsets.UTF_8);
@@ -97,20 +118,11 @@ public class Main {
         String header = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-length: " + data.length + "\r\n\r\n";
         outputToClient.write(header.getBytes());
         outputToClient.write(data);
-
-
-        // outputToClient.print("HTTP/1.1 404 Not Found\r\nContent-length: 0\r\n\r\n");
-//        synchronized (billBoard) {
-//            for (String line : billBoard) {
-//                outputToClient.print(line + "\r\n");
-//            }
-//        }
-//        outputToClient.print("\r\n");
         outputToClient.flush();
     }
 
     private static String readRequest(BufferedReader inputFromClient) throws IOException {
-        //  List<String> tempList = new ArrayList<>();
+
         var url = "";
 
         while (true) {
@@ -121,12 +133,25 @@ public class Main {
             if (line == null || line.isEmpty()) {
                 break;
             }
-            // tempList.add(line);
+
             System.out.println(line);
         }
-//        synchronized (billBoard) {
-//            billBoard.addAll(tempList);
-//        }
+
         return url;
+    }
+
+    private static void databaseConnection() {
+        try {
+            Class.forName("jdbc:sqlserver://");
+            Connection con = DriverManager.getConnection("jdbc:sqlserver://localhost;user=Java;password=alexis;database=everyloop");
+            Statement stmt = con.createStatement();
+            ResultSet rs = stmt.executeQuery("select * from users");
+            while (rs.next())
+                System.out.println(rs.getString(1) + " " + rs.getString(2));
+            con.close();
+        } catch (ClassNotFoundException | SQLException e) {
+            e.printStackTrace();
+        }
+
     }
 }
